@@ -1,107 +1,34 @@
-<!doctype html>
-<html lang="sw">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080808">
-<title>CONNECTION 18+</title>
-<style>
-:root{color-scheme:dark;--bg:#080808;--panel:#171717;--line:#303030;--red:#e53935;--muted:#aaa}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font:16px Arial,sans-serif}
-header{position:sticky;top:0;background:#0b0b0bf2;border-bottom:1px solid var(--line);padding:15px;z-index:2}
-.wrap{max-width:950px;margin:auto;padding:15px}.brand{font-size:22px;font-weight:900;letter-spacing:.5px}.brand span{color:var(--red)}
-input,select,button{font:inherit;border-radius:9px;padding:12px;border:1px solid var(--line);background:#171717;color:#fff}
-.search{width:100%;margin-top:13px}.hero{background:linear-gradient(120deg,#241010,#151515);border:1px solid #482020;border-radius:16px;padding:22px;margin:15px 0}
-h1{font-size:26px;margin:0 0 8px}.muted{color:var(--muted);font-size:14px;line-height:1.5}
-.filters{display:flex;gap:8px;overflow:auto;padding:10px 0}.filters button{white-space:nowrap}.filters button.active,.primary{background:var(--red);border-color:var(--red)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}
-.thumb{height:100px;background:#222;display:grid;place-items:center;color:var(--red);font-size:32px}
-.cardbody{padding:10px}.card h3{font-size:14px;margin:0 0 6px}.tag{color:var(--muted);font-size:12px}
-.player{background:#111;border:1px solid var(--line);border-radius:12px;padding:12px;margin:20px 0}
-.player iframe{width:100%;aspect-ratio:16/9;border:0;background:#000;border-radius:8px}
-.player video{width:100%;max-height:65vh;background:#000}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;margin:18px 0}
-.panel input,.panel select{width:100%;margin:6px 0 12px}
-button{cursor:pointer}.primary{font-weight:bold}.small{font-size:12px;color:var(--muted)}
-.hidden{display:none!important}
-.overlay{position:fixed;inset:0;background:#000e;z-index:5;display:grid;place-items:center;padding:20px}
-.modal{max-width:420px;width:100%;background:#171717;border:1px solid #444;border-radius:16px;padding:24px;text-align:center}
-.modal h2{color:var(--red)}footer{text-align:center;color:#777;font-size:12px;padding:25px}
-</style>
-</head>
-<body>
-<div id="ageGate" class="overlay">
- <div class="modal">
-  <div class="brand">CONNECTION <span>18+</span></div>
-  <h2>UTHIBITISHO WA UMRI</h2>
-  <p>Una umri wa miaka 18 au zaidi?</p>
-  <p class="small">Tovuti hii imekusudiwa watu wazima pekee. Endelea tu ikiwa una umri unaoruhusiwa kisheria katika eneo lako.</p>
-  <button class="primary" id="yes18">Ndiyo, nina miaka 18+</button>
-  <button id="no18">Hapana, toka</button>
- </div>
-</div>
-<header><div class="wrap" style="padding:0 15px">
- <div class="brand">CONNECTION <span>18+</span></div>
- <input id="search" class="search" placeholder="Tafuta video..." aria-label="Tafuta video">
-</div></header>
-<main class="wrap">
- <section class="hero"><h1>Karibu CONNECTION 18+</h1><p class="muted">Video library • Makundi • Tafuta video unayotaka</p></section>
- <nav class="filters" id="filters"></nav>
- <section id="player" class="player hidden"><h2 id="playingTitle">Video player</h2><div id="playerContent"></div><p class="small">Tumia player ya huduma ya video iliyowekwa na mmiliki.</p></section>
- <h2>Video zilizopo</h2><section id="videos" class="grid"></section>
- <section class="panel">
-  <h2>Sehemu ya msimamizi</h2>
-  <p class="muted">Ongeza video kwa kuweka embed URL kutoka kwa huduma inayoruhusu maudhui ya watu wazima.</p>
-  <label for="pin">PIN ya majaribio ya msimamizi</label><input id="pin" type="password" placeholder="Weka PIN">
-  <button id="unlock">Fungua sehemu ya kuongeza video</button>
-  <div id="admin" class="hidden">
-   <label>Jina la video</label><input id="title" placeholder="Mfano: Video 001">
-   <label>Kundi</label><select id="category"><option>Mpya</option><option>Popular</option><option>Short Videos</option><option>Nyingine</option></select>
-   <label>Embed URL (si link ya ukurasa wa kawaida)</label><input id="embed" type="url" placeholder="https://...">
-   <button class="primary" id="add">Ongeza kwenye orodha ya kifaa hiki</button>
-   <p class="small">PIN hii ni ya kuzuia kubonyeza kimakosa tu, si usalama wa kweli. Orodha inahifadhiwa kwenye browser ya simu hii pekee.</p>
-  </div>
- </section>
- <p class="small">Tumia tu video ulizotengeneza au ulizopewa ruhusa ya kusambaza. Hakikisha kila mtu anayeonekana ni mtu mzima na amekubali wazi kurekodiwa na kusambazwa.</p>
-</main>
-<footer>CONNECTION 18+ • Adult audience only</footer>
-<script>
-const KEY='connection18_catalog_v1';
-let items=JSON.parse(localStorage.getItem(KEY)||'[]');
-let category='Zote';
-const $=id=>document.getElementById(id);
-function save(){localStorage.setItem(KEY,JSON.stringify(items));render()}
-function render(){
- const cats=['Zote',...new Set(items.map(x=>x.category))];
- $('filters').innerHTML=cats.map(c=>`<button class="${c===category?'active':''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
- $('filters').querySelectorAll('button').forEach(b=>b.onclick=()=>{category=b.dataset.cat;render()});
- const q=$('search').value.toLowerCase();
- const shown=items.filter(x=>(category==='Zote'||x.category===category)&&(x.title.toLowerCase().includes(q)||x.category.toLowerCase().includes(q)));
- $('videos').innerHTML=shown.length?shown.map((x,i)=>`<article class="card" data-id="${items.indexOf(x)}"><div class="thumb">▶</div><div class="cardbody"><h3>${escapeHtml(x.title)}</h3><div class="tag">${escapeHtml(x.category)}</div></div></article>`).join(''):'<p class="muted">Bado hakuna video. Msimamizi anaweza kuongeza video kwa embed URL.</p>';
- $('videos').querySelectorAll('.card').forEach(c=>c.onclick=()=>play(items[Number(c.dataset.id)]));
+
+.player {
+  background: #080808;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 20px -15px;
+  width: calc(100% + 30px);
 }
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function play(x){
- $('player').classList.remove('hidden');$('playingTitle').textContent=x.title;
- const url=x.embed;
- if(/^https:\/\//i.test(url)){
-  $('playerContent').innerHTML=`<iframe src="${escapeHtml(url)}" title="Video player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
- }else{$('playerContent').textContent='Embed URL si sahihi. Tumia URL ya HTTPS kutoka kwa huduma ya video.'}
- $('player').scrollIntoView({behavior:'smooth'});
+
+.player iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 220px;
+  border: 0;
+  border-radius: 0;
+  background: #000;
 }
-$('search').addEventListener('input',render);
-$('yes18').onclick=()=>{sessionStorage.setItem('connection18_age','yes');$('ageGate').classList.add('hidden')};
-$('no18').onclick=()=>{document.body.innerHTML='<main class="wrap"><h2>Huwezi kuendelea.</h2></main>'};
-if(sessionStorage.getItem('connection18_age')==='yes')$('ageGate').classList.add('hidden');
-$('unlock').onclick=()=>{if($('pin').value==='1800')$('admin').classList.remove('hidden');else alert('PIN si sahihi. PIN ya majaribio ni 1800; ibadilishe kabla ya matumizi.')};
-$('add').onclick=()=>{
- const title=$('title').value.trim(),embed=$('embed').value.trim(),category=$('category').value;
- if(!title||!embed){alert('Jaza jina na embed URL.');return}
- if(!/^https:\/\//i.test(embed)){alert('Tumia embed URL inayoanza na https://');return}
- items.unshift({title,category,embed});save();$('title').value='';$('embed').value='';alert('Imeongezwa kwenye browser hii.');
-};
-render();
-</script>
-</body>
-</html>
+
+.player video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+#playingTitle {
+  padding: 12px 15px;
+  font-size: 20px;
+}
