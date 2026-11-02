@@ -1,4 +1,118 @@
 
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090909">
+<title>CONNECTION 18+</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#101010;color:white;
+ font-family:Arial,sans-serif
+}
+header{
+ background:#080808;padding:18px;
+ display:flex;justify-content:space-between;
+ align-items:center;border-bottom:2px solid #e50914
+}
+.logo{font-size:22px;font-weight:bold;color:#e50914}
+.age{background:#e50914;padding:7px 12px;border-radius:5px}
+.hero{text-align:center;padding:25px 12px}
+.hero h1{color:#e50914;margin-bottom:8px}
+.search{padding:12px 15px}
+input,select{
+ width:100%;padding:13px;margin-bottom:10px;
+ background:#252525;color:white;border:1px solid #444;
+ border-radius:7px;font-size:15px
+}
+#status{text-align:center;color:#aaa;padding:12px}
+#videos{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+ gap:14px;padding:15px
+}
+.card{background:#202020;border-radius:9px;overflow:hidden}
+.media{width:100%;aspect-ratio:16/9;background:#000}
+.media iframe,.media video{
+ width:100%;height:100%;border:0
+}
+.media video{object-fit:contain}
+.info{padding:11px}
+.info h3{font-size:15px;margin:3px 0 9px}
+.category{font-size:12px;color:#aaa}
+.download{
+ display:inline-block;margin-top:12px;
+ background:#e50914;color:white;
+ padding:9px 13px;border-radius:5px;
+ text-decoration:none;font-size:13px
+}
+.empty{text-align:center;padding:30px;color:#aaa}
+footer{
+ text-align:center;padding:25px;color:#888;
+ border-top:1px solid #333;margin-top:20px
+}
+.overlay{
+ position:fixed;inset:0;background:#000e;
+ display:flex;justify-content:center;align-items:center;
+ z-index:1000;padding:20px
+}
+.dialog{
+ background:#202020;padding:25px;
+ border-radius:12px;text-align:center;max-width:380px
+}
+.dialog button{
+ background:#e50914;color:white;border:0;
+ padding:13px 22px;border-radius:6px
+}
+</style>
+</head>
+
+<body>
+
+<header>
+ <div class="logo">CONNECTION 18+</div>
+ <div class="age">18+</div>
+</header>
+
+<section class="hero">
+ <h1>CONNECTION 18+</h1>
+ <p>Welcome to our platform</p>
+</section>
+
+<div class="search">
+ <input id="search" placeholder="Search videos..." oninput="filterVideos()">
+ <select id="category" onchange="filterVideos()">
+  <option value="">All Categories</option>
+ </select>
+</div>
+
+<div id="status">Connecting to database...</div>
+<div id="videos">
+ <div class="empty">Loading videos...</div>
+</div>
+
+<footer>
+ CONNECTION 18+ © 2026
+</footer>
+
+<div class="overlay" id="ageGate">
+ <div class="dialog">
+  <h2>CONNECTION 18+</h2>
+  <p>This website is intended for adults aged 18 and over.</p>
+  <button onclick="enterSite()">I am 18 or older</button>
+ </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+
+// FIREBASE CONFIGURATION
+
 const firebaseConfig = {
   apiKey: "AIzaSyCYCriveNctKXLDV3nvhwskrx4N_jCTziE",
   authDomain: "connection-18-c5446.firebaseapp.com",
@@ -8,3 +122,192 @@ const firebaseConfig = {
   messagingSenderId: "456365988687",
   appId: "1:456365988687:web:f1fbb5ec4996c96b79833a"
 };
+
+let allVideos = [];
+
+function enterSite(){
+ sessionStorage.setItem("connectionAgeConfirmed","yes");
+ document.getElementById("ageGate").style.display="none";
+}
+
+if(sessionStorage.getItem("connectionAgeConfirmed")==="yes"){
+ document.getElementById("ageGate").style.display="none";
+}
+
+// FIREBASE CONNECTION
+
+try {
+
+ if(firebaseConfig.databaseURL.includes("WEKA_")){
+  throw new Error("Weka Database URL yako kwanza.");
+ }
+
+ firebase.initializeApp(firebaseConfig);
+ const db = firebase.database();
+
+ db.ref("videos").on("value", snapshot => {
+
+  allVideos = [];
+
+  snapshot.forEach(child => {
+   const v = child.val();
+
+   if(v && (v.url || v.videoUrl || v.embedUrl)){
+    allVideos.push({
+     id: child.key,
+     title: v.title || v.name || "Video",
+     url: v.url || v.videoUrl || v.embedUrl,
+     category: v.category || "General",
+     thumbnail: v.thumbnail || ""
+    });
+   }
+  });
+
+  loadCategories();
+  filterVideos();
+
+  document.getElementById("status").textContent =
+   allVideos.length + " videos found";
+
+ }, error => {
+  document.getElementById("status").textContent =
+   "Database error: " + error.message;
+ });
+
+} catch(error) {
+ document.getElementById("status").textContent =
+  error.message;
+}
+
+// CATEGORIES
+
+function loadCategories(){
+
+ const select = document.getElementById("category");
+ const oldValue = select.value;
+
+ select.innerHTML = '<option value="">All Categories</option>';
+
+ const categories = [...new Set(allVideos.map(v=>v.category))];
+
+ categories.forEach(cat=>{
+  const option = document.createElement("option");
+  option.value = cat;
+  option.textContent = cat;
+  select.appendChild(option);
+ });
+
+ if(categories.includes(oldValue)) select.value = oldValue;
+}
+
+// GOOGLE DRIVE EMBED
+
+function getEmbedUrl(url){
+
+ if(!url) return "";
+
+ const match = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+
+ if(match){
+  return "https://drive.google.com/file/d/" +
+  match[1] + "/preview";
+ }
+
+ return url;
+}
+
+// DISPLAY VIDEOS
+
+function showVideos(list){
+
+ const container = document.getElementById("videos");
+ container.innerHTML = "";
+
+ if(!list.length){
+  container.innerHTML =
+   '<div class="empty">No videos found.</div>';
+  return;
+ }
+
+ list.forEach(v=>{
+
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const media = document.createElement("div");
+  media.className = "media";
+
+  const url = getEmbedUrl(v.url);
+
+  if(/\.(mp4|webm|ogg)(\?.*)?$/i.test(url)){
+
+   const video = document.createElement("video");
+   video.src = url;
+   video.controls = true;
+   video.playsInline = true;
+   video.preload = "metadata";
+
+   if(v.thumbnail) video.poster = v.thumbnail;
+
+   media.appendChild(video);
+
+  }else{
+
+   const iframe = document.createElement("iframe");
+   iframe.src = url;
+   iframe.allowFullscreen = true;
+   iframe.loading = "lazy";
+   iframe.allow = "autoplay; fullscreen";
+
+   media.appendChild(iframe);
+  }
+
+  const info = document.createElement("div");
+  info.className = "info";
+
+  const title = document.createElement("h3");
+  title.textContent = v.title;
+
+  const category = document.createElement("div");
+  category.className = "category";
+  category.textContent = v.category;
+
+  info.appendChild(title);
+  info.appendChild(category);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.className = "download";
+  link.textContent = "Open / Download";
+
+  info.appendChild(link);
+
+  card.appendChild(media);
+  card.appendChild(info);
+  container.appendChild(card);
+
+ });
+}
+
+// SEARCH AND FILTER
+
+function filterVideos(){
+
+ const search = document.getElementById("search")
+ .value.toLowerCase();
+
+ const category = document.getElementById("category").value;
+
+ const filtered = allVideos.filter(v=>
+  v.title.toLowerCase().includes(search) &&
+  (!category || v.category === category)
+ );
+
+ showVideos(filtered);
+}
+
+</script>
+</body>
+</html>
