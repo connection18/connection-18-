@@ -16,6 +16,9 @@ header h1{color:#ff2525;margin:0}
 button{background:#e50914;color:white;border:0;padding:12px;border-radius:6px;cursor:pointer}
 input,textarea{width:100%;padding:12px;margin:8px 0;background:#222;color:white;border:1px solid #444;border-radius:6px}
 .card{background:#181818;margin:15px 0;border-radius:10px;overflow:hidden}
+.poster{position:relative;width:100%;aspect-ratio:16/9;background:#000;cursor:pointer}
+.poster img{width:100%;height:100%;object-fit:cover}
+.play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#e50914;border-radius:50%;width:65px;height:65px;display:grid;place-items:center;font-size:28px}
 .player{position:relative;width:100%;aspect-ratio:16/9;background:black}
 .player iframe{width:100%;height:100%;position:absolute;inset:0;border:0}
 .info{padding:14px}
@@ -26,14 +29,12 @@ input,textarea{width:100%;padding:12px;margin:8px 0;background:#222;color:white;
 </head>
 
 <body>
-
 <header>
 <h1>CONNECTION 18+</h1>
 <p>Karibu kwenye maktaba yetu ya video</p>
 </header>
 
 <div class="container">
-
 <button onclick="showLogin()">ADMIN LOGIN</button>
 
 <div id="admin">
@@ -49,6 +50,8 @@ input,textarea{width:100%;padding:12px;margin:8px 0;background:#222;color:white;
 <h3>Ongeza video mpya</h3>
 <input id="title" placeholder="Jina la video">
 <textarea id="embed" rows="4" placeholder="Bandika Embed Code hapa"></textarea>
+<label>Thumbnail URL ya picha ya GitHub</label>
+<input id="thumbnail" placeholder="Bandika link ya picha hapa">
 <button onclick="addVideo()">ADD VIDEO</button>
 <button onclick="logout()" style="background:#555">LOGOUT</button>
 </div>
@@ -59,7 +62,6 @@ input,textarea{width:100%;padding:12px;margin:8px 0;background:#222;color:white;
 <h2>Video Zetu</h2>
 <div class="status" id="status">Inaunganisha...</div>
 <div id="videos"></div>
-
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -67,9 +69,6 @@ input,textarea{width:100%;padding:12px;margin:8px 0;background:#222;color:white;
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
-
-// FIREBASE CONFIGURATION
-
 const firebaseConfig = {
   apiKey: "AIzaSyCYCriveNctKXLDV3nvhwskrx4N_jCTziE",
   authDomain: "connection-18-c5446.firebaseapp.com",
@@ -81,25 +80,19 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.database();
 
 let isAdmin = false;
 let allVideos = {};
 
-// SHOW ADMIN
-
 function showLogin(){
  document.getElementById("admin").style.display="block";
 }
 
-// AUTHENTICATION
-
 function login(){
-
- const email = document.getElementById("email").value.trim();
- const password = document.getElementById("password").value;
+ const email=document.getElementById("email").value.trim();
+ const password=document.getElementById("password").value;
 
  if(!email || !password){
   alert("Jaza email na password");
@@ -107,12 +100,8 @@ function login(){
  }
 
  auth.signInWithEmailAndPassword(email,password)
- .then(()=>{
-  alert("Umeingia Admin");
- })
- .catch(error=>{
-  alert("Imeshindikana kuingia: "+error.message);
- });
+ .then(()=>alert("Umeingia Admin"))
+ .catch(error=>alert(error.message));
 }
 
 function logout(){
@@ -120,52 +109,34 @@ function logout(){
 }
 
 auth.onAuthStateChanged(user=>{
+ isAdmin=!!user;
 
- isAdmin = !!user;
-
- document.getElementById("loginBox").style.display =
-  isAdmin ? "none" : "block";
-
- document.getElementById("panel").style.display =
-  isAdmin ? "block" : "none";
-
- document.getElementById("adminStatus").textContent =
-  isAdmin ? "Admin ameingia" : "Admin hajatambulika";
+ document.getElementById("loginBox").style.display=isAdmin?"none":"block";
+ document.getElementById("panel").style.display=isAdmin?"block":"none";
+ document.getElementById("adminStatus").textContent=isAdmin?"Admin ameingia":"Admin hajatambulika";
 
  showVideos();
-
 });
 
-// READ VIDEOS FROM FIREBASE
-
 db.ref("videos").on("value",snapshot=>{
-
- allVideos = {};
+ allVideos={};
 
  snapshot.forEach(child=>{
-  allVideos[child.key] = child.val();
+  allVideos[child.key]=child.val();
  });
 
  showVideos();
-
- document.getElementById("status").textContent =
-  Object.keys(allVideos).length + " video zimepatikana";
-
+ document.getElementById("status").textContent=
+ Object.keys(allVideos).length+" video zimepatikana";
 },error=>{
-
- document.getElementById("status").textContent =
-  "Database error: "+error.message;
-
+ document.getElementById("status").textContent="Database error: "+error.message;
 });
 
-// DISPLAY VIDEOS
-
 function showVideos(){
+ const area=document.getElementById("videos");
+ area.innerHTML="";
 
- const area = document.getElementById("videos");
- area.innerHTML = "";
-
- const entries = Object.entries(allVideos);
+ const entries=Object.entries(allVideos);
 
  if(entries.length===0){
   area.innerHTML="<p class='small'>Hakuna video zilizowekwa bado.</p>";
@@ -173,53 +144,77 @@ function showVideos(){
  }
 
  entries.forEach(([id,v])=>{
+  if(!v || !v.url)return;
 
-  if(!v || !v.url) return;
-
-  const card = document.createElement("div");
+  const card=document.createElement("div");
   card.className="card";
 
-  const player = document.createElement("div");
-  player.className="player";
+  const heading=document.createElement("h3");
+  heading.textContent=v.title||"Video";
 
-  const frame = document.createElement("iframe");
-  frame.src=v.url;
-  frame.title=v.title || "Video";
-  frame.allow="autoplay; fullscreen; picture-in-picture";
-  frame.allowFullscreen=true;
-
-  player.appendChild(frame);
-
-  const info = document.createElement("div");
+  const info=document.createElement("div");
   info.className="info";
-
-  const heading = document.createElement("h3");
-  heading.textContent=v.title || "Video";
-
   info.appendChild(heading);
 
-  if(isAdmin){
+  if(v.thumbnail){
+   const poster=document.createElement("div");
+   poster.className="poster";
 
-   const del = document.createElement("button");
+   const img=document.createElement("img");
+   img.src=v.thumbnail;
+   img.alt=v.title||"Thumbnail";
+   img.loading="lazy";
+
+   const play=document.createElement("div");
+   play.className="play";
+   play.textContent="▶";
+
+   poster.appendChild(img);
+   poster.appendChild(play);
+
+   poster.onclick=()=>{
+    const player=document.createElement("div");
+    player.className="player";
+
+    const frame=document.createElement("iframe");
+    frame.src=v.url;
+    frame.title=v.title||"Video";
+    frame.allow="autoplay; fullscreen; picture-in-picture";
+    frame.allowFullscreen=true;
+
+    player.appendChild(frame);
+    poster.replaceWith(player);
+   };
+
+   card.appendChild(poster);
+  }else{
+   const player=document.createElement("div");
+   player.className="player";
+
+   const frame=document.createElement("iframe");
+   frame.src=v.url;
+   frame.title=v.title||"Video";
+   frame.allow="autoplay; fullscreen; picture-in-picture";
+   frame.allowFullscreen=true;
+
+   player.appendChild(frame);
+   card.appendChild(player);
+  }
+
+  if(isAdmin){
+   const del=document.createElement("button");
    del.textContent="FUTA VIDEO";
    del.style.background="#555";
-
    del.onclick=()=>deleteVideo(id);
-
    info.appendChild(del);
   }
 
-  card.appendChild(player);
   card.appendChild(info);
   area.appendChild(card);
-
  });
 }
 
-// ADD VIDEO
-
 function addVideo(){
-
  if(!auth.currentUser){
   alert("Admin lazima aingie kwanza");
   return;
@@ -227,62 +222,59 @@ function addVideo(){
 
  const title=document.getElementById("title").value.trim();
  const code=document.getElementById("embed").value.trim();
+ const thumbnail=document.getElementById("thumbnail").value.trim();
 
  const match=code.match(/<iframe\b[^>]*\bsrc=["']([^"']+)["']/i);
 
- if(!title || !match){
-  alert("Jaza jina na Embed Code sahihi");
+ if(!title || !match || !thumbnail){
+  alert("Jaza jina, Embed Code na Thumbnail URL");
   return;
  }
 
- const url=match[1];
-
- let parsed;
+ let parsed, imageURL;
 
  try{
-  parsed=new URL(url);
+  parsed=new URL(match[1]);
+  imageURL=new URL(thumbnail);
  }catch(e){
-  alert("Video URL si sahihi");
+  alert("Link si sahihi");
   return;
  }
 
  if(parsed.protocol!=="https:" ||
-    parsed.hostname!=="upload18.org" &&
-    !parsed.hostname.endsWith(".upload18.org")){
+    !(parsed.hostname==="upload18.org" || parsed.hostname.endsWith(".upload18.org"))){
   alert("Tumia Embed Code ya Upload18 pekee");
+  return;
+ }
+
+ if(imageURL.protocol!=="https:" ||
+    !(imageURL.hostname==="github.com" ||
+      imageURL.hostname==="raw.githubusercontent.com")){
+  alert("Tumia link ya picha ya GitHub");
   return;
  }
 
  db.ref("videos").push({
   title:title,
-  url:url,
+  url:parsed.href,
+  thumbnail:imageURL.href,
   createdAt:Date.now()
  }).then(()=>{
-
   document.getElementById("title").value="";
   document.getElementById("embed").value="";
+  document.getElementById("thumbnail").value="";
   alert("Video imeongezwa kwa mafanikio");
-
- }).catch(error=>{
-  alert("Imeshindikana kuongeza video: "+error.message);
- });
-
+ }).catch(error=>alert(error.message));
 }
 
-// DELETE VIDEO
-
 function deleteVideo(id){
-
- if(!auth.currentUser) return;
-
+ if(!auth.currentUser)return;
  if(!confirm("Una uhakika unataka kufuta video?"))return;
 
  db.ref("videos/"+id).remove()
  .then(()=>alert("Video imefutwa"))
  .catch(error=>alert(error.message));
 }
-
 </script>
-
 </body>
 </html>
