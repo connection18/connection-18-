@@ -9,104 +9,61 @@
 
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;background:#101010;color:white;
- font-family:Arial,sans-serif
-}
-header{
- background:#080808;padding:18px;
- display:flex;justify-content:space-between;
- align-items:center;border-bottom:2px solid #e50914
-}
-.logo{font-size:22px;font-weight:bold;color:#e50914}
-.age{background:#e50914;padding:7px 12px;border-radius:5px}
-.hero{text-align:center;padding:25px 12px}
-.hero h1{color:#e50914;margin-bottom:8px}
-.search{padding:12px 15px}
-input,select{
- width:100%;padding:13px;margin-bottom:10px;
- background:#252525;color:white;border:1px solid #444;
- border-radius:7px;font-size:15px
-}
-#status{text-align:center;color:#aaa;padding:12px}
-#videos{
- display:grid;
- grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
- gap:14px;padding:15px
-}
-.card{background:#202020;border-radius:9px;overflow:hidden}
-.media{width:100%;aspect-ratio:16/9;background:#000}
-.media iframe,.media video{
- width:100%;height:100%;border:0
-}
-.media video{object-fit:contain}
-.info{padding:11px}
-.info h3{font-size:15px;margin:3px 0 9px}
-.category{font-size:12px;color:#aaa}
-.download{
- display:inline-block;margin-top:12px;
- background:#e50914;color:white;
- padding:9px 13px;border-radius:5px;
- text-decoration:none;font-size:13px
-}
-.empty{text-align:center;padding:30px;color:#aaa}
-footer{
- text-align:center;padding:25px;color:#888;
- border-top:1px solid #333;margin-top:20px
-}
-.overlay{
- position:fixed;inset:0;background:#000e;
- display:flex;justify-content:center;align-items:center;
- z-index:1000;padding:20px
-}
-.dialog{
- background:#202020;padding:25px;
- border-radius:12px;text-align:center;max-width:380px
-}
-.dialog button{
- background:#e50914;color:white;border:0;
- padding:13px 22px;border-radius:6px
-}
+body{margin:0;background:#090909;color:white;font-family:Arial}
+header{background:#151515;padding:20px;text-align:center;border-bottom:2px solid red}
+header h1{color:#ff2525;margin:0}
+.container{max-width:850px;margin:auto;padding:15px}
+button{background:#e50914;color:white;border:0;padding:12px;border-radius:6px;cursor:pointer}
+input,textarea{width:100%;padding:12px;margin:8px 0;background:#222;color:white;border:1px solid #444;border-radius:6px}
+.card{background:#181818;margin:15px 0;border-radius:10px;overflow:hidden}
+.player{position:relative;width:100%;aspect-ratio:16/9;background:black}
+.player iframe{width:100%;height:100%;position:absolute;inset:0;border:0}
+.info{padding:14px}
+#admin{display:none;background:#171717;padding:15px;border-radius:10px;margin:15px 0}
+.small{font-size:13px;color:#aaa}
+.status{text-align:center;color:#aaa;padding:12px}
 </style>
 </head>
 
 <body>
 
 <header>
- <div class="logo">CONNECTION 18+</div>
- <div class="age">18+</div>
+<h1>CONNECTION 18+</h1>
+<p>Karibu kwenye maktaba yetu ya video</p>
 </header>
 
-<section class="hero">
- <h1>CONNECTION 18+</h1>
- <p>Welcome to our platform</p>
-</section>
+<div class="container">
 
-<div class="search">
- <input id="search" placeholder="Search videos..." oninput="filterVideos()">
- <select id="category" onchange="filterVideos()">
-  <option value="">All Categories</option>
- </select>
+<button onclick="showLogin()">ADMIN LOGIN</button>
+
+<div id="admin">
+<h2>ADMIN DASHBOARD</h2>
+
+<div id="loginBox">
+<input id="email" type="email" placeholder="Admin email">
+<input id="password" type="password" placeholder="Admin password">
+<button onclick="login()">INGIA</button>
 </div>
 
-<div id="status">Connecting to database...</div>
-<div id="videos">
- <div class="empty">Loading videos...</div>
+<div id="panel" style="display:none">
+<h3>Ongeza video mpya</h3>
+<input id="title" placeholder="Jina la video">
+<textarea id="embed" rows="4" placeholder="Bandika Embed Code hapa"></textarea>
+<button onclick="addVideo()">ADD VIDEO</button>
+<button onclick="logout()" style="background:#555">LOGOUT</button>
 </div>
 
-<footer>
- CONNECTION 18+ © 2026
-</footer>
+<p class="small" id="adminStatus">Admin wa tovuti</p>
+</div>
 
-<div class="overlay" id="ageGate">
- <div class="dialog">
-  <h2>CONNECTION 18+</h2>
-  <p>This website is intended for adults aged 18 and over.</p>
-  <button onclick="enterSite()">I am 18 or older</button>
- </div>
+<h2>Video Zetu</h2>
+<div class="status" id="status">Inaunganisha...</div>
+<div id="videos"></div>
+
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <script>
@@ -123,191 +80,209 @@ const firebaseConfig = {
   appId: "1:456365988687:web:f1fbb5ec4996c96b79833a"
 };
 
-let allVideos = [];
+firebase.initializeApp(firebaseConfig);
 
-function enterSite(){
- sessionStorage.setItem("connectionAgeConfirmed","yes");
- document.getElementById("ageGate").style.display="none";
+const auth = firebase.auth();
+const db = firebase.database();
+
+let isAdmin = false;
+let allVideos = {};
+
+// SHOW ADMIN
+
+function showLogin(){
+ document.getElementById("admin").style.display="block";
 }
 
-if(sessionStorage.getItem("connectionAgeConfirmed")==="yes"){
- document.getElementById("ageGate").style.display="none";
-}
+// AUTHENTICATION
 
-// FIREBASE CONNECTION
+function login(){
 
-try {
+ const email = document.getElementById("email").value.trim();
+ const password = document.getElementById("password").value;
 
- if(firebaseConfig.databaseURL.includes("WEKA_")){
-  throw new Error("Weka Database URL yako kwanza.");
- }
-
- firebase.initializeApp(firebaseConfig);
- const db = firebase.database();
-
- db.ref("videos").on("value", snapshot => {
-
-  allVideos = [];
-
-  snapshot.forEach(child => {
-   const v = child.val();
-
-   if(v && (v.url || v.videoUrl || v.embedUrl)){
-    allVideos.push({
-     id: child.key,
-     title: v.title || v.name || "Video",
-     url: v.url || v.videoUrl || v.embedUrl,
-     category: v.category || "General",
-     thumbnail: v.thumbnail || ""
-    });
-   }
-  });
-
-  loadCategories();
-  filterVideos();
-
-  document.getElementById("status").textContent =
-   allVideos.length + " videos found";
-
- }, error => {
-  document.getElementById("status").textContent =
-   "Database error: " + error.message;
- });
-
-} catch(error) {
- document.getElementById("status").textContent =
-  error.message;
-}
-
-// CATEGORIES
-
-function loadCategories(){
-
- const select = document.getElementById("category");
- const oldValue = select.value;
-
- select.innerHTML = '<option value="">All Categories</option>';
-
- const categories = [...new Set(allVideos.map(v=>v.category))];
-
- categories.forEach(cat=>{
-  const option = document.createElement("option");
-  option.value = cat;
-  option.textContent = cat;
-  select.appendChild(option);
- });
-
- if(categories.includes(oldValue)) select.value = oldValue;
-}
-
-// GOOGLE DRIVE EMBED
-
-function getEmbedUrl(url){
-
- if(!url) return "";
-
- const match = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-
- if(match){
-  return "https://drive.google.com/file/d/" +
-  match[1] + "/preview";
- }
-
- return url;
-}
-
-// DISPLAY VIDEOS
-
-function showVideos(list){
-
- const container = document.getElementById("videos");
- container.innerHTML = "";
-
- if(!list.length){
-  container.innerHTML =
-   '<div class="empty">No videos found.</div>';
+ if(!email || !password){
+  alert("Jaza email na password");
   return;
  }
 
- list.forEach(v=>{
+ auth.signInWithEmailAndPassword(email,password)
+ .then(()=>{
+  alert("Umeingia Admin");
+ })
+ .catch(error=>{
+  alert("Imeshindikana kuingia: "+error.message);
+ });
+}
+
+function logout(){
+ auth.signOut();
+}
+
+auth.onAuthStateChanged(user=>{
+
+ isAdmin = !!user;
+
+ document.getElementById("loginBox").style.display =
+  isAdmin ? "none" : "block";
+
+ document.getElementById("panel").style.display =
+  isAdmin ? "block" : "none";
+
+ document.getElementById("adminStatus").textContent =
+  isAdmin ? "Admin ameingia" : "Admin hajatambulika";
+
+ showVideos();
+
+});
+
+// READ VIDEOS FROM FIREBASE
+
+db.ref("videos").on("value",snapshot=>{
+
+ allVideos = {};
+
+ snapshot.forEach(child=>{
+  allVideos[child.key] = child.val();
+ });
+
+ showVideos();
+
+ document.getElementById("status").textContent =
+  Object.keys(allVideos).length + " video zimepatikana";
+
+},error=>{
+
+ document.getElementById("status").textContent =
+  "Database error: "+error.message;
+
+});
+
+// DISPLAY VIDEOS
+
+function showVideos(){
+
+ const area = document.getElementById("videos");
+ area.innerHTML = "";
+
+ const entries = Object.entries(allVideos);
+
+ if(entries.length===0){
+  area.innerHTML="<p class='small'>Hakuna video zilizowekwa bado.</p>";
+  return;
+ }
+
+ entries.forEach(([id,v])=>{
+
+  if(!v || !v.url) return;
 
   const card = document.createElement("div");
-  card.className = "card";
+  card.className="card";
 
-  const media = document.createElement("div");
-  media.className = "media";
+  const player = document.createElement("div");
+  player.className="player";
 
-  const url = getEmbedUrl(v.url);
+  const frame = document.createElement("iframe");
+  frame.src=v.url;
+  frame.title=v.title || "Video";
+  frame.allow="autoplay; fullscreen; picture-in-picture";
+  frame.allowFullscreen=true;
 
-  if(/\.(mp4|webm|ogg)(\?.*)?$/i.test(url)){
-
-   const video = document.createElement("video");
-   video.src = url;
-   video.controls = true;
-   video.playsInline = true;
-   video.preload = "metadata";
-
-   if(v.thumbnail) video.poster = v.thumbnail;
-
-   media.appendChild(video);
-
-  }else{
-
-   const iframe = document.createElement("iframe");
-   iframe.src = url;
-   iframe.allowFullscreen = true;
-   iframe.loading = "lazy";
-   iframe.allow = "autoplay; fullscreen";
-
-   media.appendChild(iframe);
-  }
+  player.appendChild(frame);
 
   const info = document.createElement("div");
-  info.className = "info";
+  info.className="info";
 
-  const title = document.createElement("h3");
-  title.textContent = v.title;
+  const heading = document.createElement("h3");
+  heading.textContent=v.title || "Video";
 
-  const category = document.createElement("div");
-  category.className = "category";
-  category.textContent = v.category;
+  info.appendChild(heading);
 
-  info.appendChild(title);
-  info.appendChild(category);
+  if(isAdmin){
 
-  const link = document.createElement("a");
-  link.href = url;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.className = "download";
-  link.textContent = "Open / Download";
+   const del = document.createElement("button");
+   del.textContent="FUTA VIDEO";
+   del.style.background="#555";
 
-  info.appendChild(link);
+   del.onclick=()=>deleteVideo(id);
 
-  card.appendChild(media);
+   info.appendChild(del);
+  }
+
+  card.appendChild(player);
   card.appendChild(info);
-  container.appendChild(card);
+  area.appendChild(card);
 
  });
 }
 
-// SEARCH AND FILTER
+// ADD VIDEO
 
-function filterVideos(){
+function addVideo(){
 
- const search = document.getElementById("search")
- .value.toLowerCase();
+ if(!auth.currentUser){
+  alert("Admin lazima aingie kwanza");
+  return;
+ }
 
- const category = document.getElementById("category").value;
+ const title=document.getElementById("title").value.trim();
+ const code=document.getElementById("embed").value.trim();
 
- const filtered = allVideos.filter(v=>
-  v.title.toLowerCase().includes(search) &&
-  (!category || v.category === category)
- );
+ const match=code.match(/<iframe\b[^>]*\bsrc=["']([^"']+)["']/i);
 
- showVideos(filtered);
+ if(!title || !match){
+  alert("Jaza jina na Embed Code sahihi");
+  return;
+ }
+
+ const url=match[1];
+
+ let parsed;
+
+ try{
+  parsed=new URL(url);
+ }catch(e){
+  alert("Video URL si sahihi");
+  return;
+ }
+
+ if(parsed.protocol!=="https:" ||
+    parsed.hostname!=="upload18.org" &&
+    !parsed.hostname.endsWith(".upload18.org")){
+  alert("Tumia Embed Code ya Upload18 pekee");
+  return;
+ }
+
+ db.ref("videos").push({
+  title:title,
+  url:url,
+  createdAt:Date.now()
+ }).then(()=>{
+
+  document.getElementById("title").value="";
+  document.getElementById("embed").value="";
+  alert("Video imeongezwa kwa mafanikio");
+
+ }).catch(error=>{
+  alert("Imeshindikana kuongeza video: "+error.message);
+ });
+
+}
+
+// DELETE VIDEO
+
+function deleteVideo(id){
+
+ if(!auth.currentUser) return;
+
+ if(!confirm("Una uhakika unataka kufuta video?"))return;
+
+ db.ref("videos/"+id).remove()
+ .then(()=>alert("Video imefutwa"))
+ .catch(error=>alert(error.message));
 }
 
 </script>
+
 </body>
 </html>
