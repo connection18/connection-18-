@@ -2,145 +2,158 @@
 <!DOCTYPE html>
 <html lang="sw">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#090909">
-  <title>CONNECTION 18+</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: #090909;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-
-    header {
-      background: #151515;
-      padding: 20px 12px;
-      text-align: center;
-      border-bottom: 2px solid #e50914;
-    }
-
-    header h1 {
-      color: #ff2525;
-      margin: 0;
-      font-size: 25px;
-    }
-
-    header p {
-      color: #aaa;
-      margin: 7px 0 0;
-      font-size: 13px;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
-      padding: 15px;
-    }
-
-    .section-title {
-      font-size: 18px;
-      margin: 12px 0;
-    }
-
-    .video-card {
-      background: #181818;
-      border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 20px;
-      border: 1px solid #333;
-    }
-
-    .player {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #000;
-    }
-
-    .player iframe {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
-
-    .video-info {
-      padding: 14px;
-    }
-
-    .video-info h2 {
-      font-size: 17px;
-      margin: 0 0 7px;
-    }
-
-    .video-info p {
-      color: #aaa;
-      font-size: 13px;
-      margin: 0;
-    }
-
-    .label {
-      display: inline-block;
-      background: #e50914;
-      padding: 5px 9px;
-      border-radius: 5px;
-      font-size: 11px;
-      margin-bottom: 10px;
-    }
-
-    footer {
-      text-align: center;
-      padding: 25px 10px;
-      color: #777;
-      font-size: 12px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CONNECTION 18+</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#090909;color:white;font-family:Arial}
+header{background:#151515;padding:20px;text-align:center;border-bottom:2px solid red}
+header h1{color:#ff2525;margin:0}
+.container{max-width:850px;margin:auto;padding:15px}
+button{background:#e50914;color:white;border:0;padding:12px;border-radius:6px;cursor:pointer}
+input,textarea{width:100%;padding:12px;margin:8px 0;background:#222;color:white;border:1px solid #444;border-radius:6px}
+.card{background:#181818;margin:15px 0;border-radius:10px;overflow:hidden}
+.player{position:relative;width:100%;aspect-ratio:16/9;background:black}
+.player iframe{width:100%;height:100%;position:absolute;inset:0;border:0}
+.info{padding:14px}
+#admin{display:none;background:#171717;padding:15px;border-radius:10px;margin:15px 0}
+.small{font-size:13px;color:#aaa}
+</style>
 </head>
-
 <body>
 
 <header>
-  <h1>CONNECTION 18+</h1>
-  <p>Karibu kwenye maktaba yetu ya video</p>
+<h1>CONNECTION 18+</h1>
+<p>Karibu kwenye maktaba yetu ya video</p>
 </header>
 
-<main class="container">
+<div class="container">
 
-  <h2 class="section-title">Video Mpya</h2>
+<button onclick="showLogin()">ADMIN LOGIN</button>
 
-  <div class="video-card">
+<div id="admin">
+<h2>ADMIN DASHBOARD</h2>
+<input id="password" type="password" placeholder="Admin password">
+<button onclick="login()">INGIA</button>
 
-    <div class="player">
-      <iframe
-        src="https://upload18.org/play/index/746dee08bf9f"
-        title="VID-20261101-WA0008"
-        allow="autoplay; fullscreen; picture-in-picture"
-        allowfullscreen>
-      </iframe>
-    </div>
+<div id="panel" style="display:none">
+<h3>Ongeza video mpya</h3>
+<input id="title" placeholder="Jina la video">
+<textarea id="embed" rows="4" placeholder="Bandika Embed Code hapa"></textarea>
+<button onclick="addVideo()">ADD VIDEO</button>
+<button onclick="logout()" style="background:#555">LOGOUT</button>
+</div>
+<p class="small">Admin wa tovuti</p>
+</div>
 
-    <div class="video-info">
-      <span class="label">VIDEO YA KWANZA</span>
-      <h2>VID-20261101-WA0008</h2>
-      <p>CONNECTION 18+</p>
-    </div>
+<h2>Video Zetu</h2>
+<div id="videos"></div>
 
-  </div>
+</div>
 
-</main>
+<script>
+const ADMIN_PASSWORD = "mtafutaji";
 
-<footer>
-  CONNECTION 18+ &copy; 2026
-  <p>Kwa watu wazima wenye umri wa miaka 18 na zaidi.</p>
-</footer>
+const firstVideo = {
+ title:"VID-20261101-WA0008",
+ url:"https://upload18.org/play/index/746dee08bf9f"
+};
+
+function getVideos(){
+ let saved=localStorage.getItem("connectionVideos");
+ if(saved) return JSON.parse(saved);
+ localStorage.setItem("connectionVideos",JSON.stringify([firstVideo]));
+ return [firstVideo];
+}
+
+function showVideos(){
+ const area=document.getElementById("videos");
+ area.innerHTML="";
+ getVideos().forEach((v,i)=>{
+  const card=document.createElement("div");
+  card.className="card";
+
+  const player=document.createElement("div");
+  player.className="player";
+  const frame=document.createElement("iframe");
+  frame.src=v.url;
+  frame.title=v.title;
+  frame.allow="autoplay; fullscreen; picture-in-picture";
+  frame.allowFullscreen=true;
+  player.appendChild(frame);
+
+  const info=document.createElement("div");
+  info.className="info";
+  const heading=document.createElement("h3");
+  heading.textContent=v.title;
+  info.appendChild(heading);
+
+  const del=document.createElement("button");
+  del.textContent="FUTA VIDEO";
+  del.style.background="#555";
+  del.onclick=()=>deleteVideo(i);
+  info.appendChild(del);
+
+  card.appendChild(player);
+  card.appendChild(info);
+  area.appendChild(card);
+ });
+}
+
+function showLogin(){
+ document.getElementById("admin").style.display="block";
+}
+
+function login(){
+ if(document.getElementById("password").value===ADMIN_PASSWORD){
+  document.getElementById("panel").style.display="block";
+  alert("Umeingia Admin");
+ }else{
+  alert("Password si sahihi");
+ }
+}
+
+function addVideo(){
+ const title=document.getElementById("title").value.trim();
+ const code=document.getElementById("embed").value.trim();
+
+ const match=code.match(/<iframe\b[^>]*\bsrc=["']([^"']+)["']/i);
+ if(!title || !match){
+  alert("Jaza jina na Embed Code sahihi");
+  return;
+ }
+
+ const url=match[1];
+ if(!url.startsWith("https://upload18.org/")){
+  alert("Tumia Embed Code ya Upload18 pekee");
+  return;
+ }
+
+ let videos=getVideos();
+ videos.unshift({title,url});
+ localStorage.setItem("connectionVideos",JSON.stringify(videos));
+ document.getElementById("title").value="";
+ document.getElementById("embed").value="";
+ showVideos();
+ alert("Video imeongezwa kwenye browser hii");
+}
+
+function deleteVideo(index){
+ if(!confirm("Una uhakika unataka kufuta video?"))return;
+ let videos=getVideos();
+ videos.splice(index,1);
+ localStorage.setItem("connectionVideos",JSON.stringify(videos));
+ showVideos();
+}
+
+function logout(){
+ document.getElementById("panel").style.display="none";
+ document.getElementById("password").value="";
+}
+
+showVideos();
+</script>
 
 </body>
 </html>
